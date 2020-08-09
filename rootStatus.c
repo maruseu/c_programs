@@ -2,15 +2,13 @@
 #include <X11/Xlib.h>
 #include <time.h>
 #include <stdio.h>
-char buffer[128];
+char buffer[32];
 Display *dpy;
 struct tm *times;
 time_t rawtime;
 const char *getWeekdayName(int);
 
 int main(void){
-	
-	setvbuf(stdout, NULL, _IONBF, 0);
 	if((dpy=XOpenDisplay(NULL)))
 		do {
 			XFlush(dpy);
@@ -20,7 +18,7 @@ int main(void){
 			snprintf(buffer,128,"%s %02d/%02d %02d:%02d",
 					getWeekdayName(times->tm_wday),
 					times->tm_mday,times->tm_mon+1,
-					times->tm_hour,times->tm_min);//,times->tm_sec);
+					times->tm_hour,times->tm_min);
 		} while(XStoreName(dpy, DefaultRootWindow(dpy),buffer));
 	else printf("Couldnt open display\n");
 
