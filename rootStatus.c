@@ -2,20 +2,29 @@
 #include <X11/Xlib.h>
 #include <time.h>
 #include <stdio.h>
-char buffer[32];
+#define bs 64
+char buffer[bs];
 Display *dpy;
 struct tm *times;
 time_t rawtime;
 const char *getWeekdayName(int);
 
 int main(void){
+	FILE* pFTemp;
+	int temp;
 	if((dpy=XOpenDisplay(NULL)))
 		do {
 			XFlush(dpy);
 			sleep(1);
+
+			pFTemp = fopen("/sys/class/hwmon/hwmon0/temp1_input", "r");
+			fscanf(pFTemp,"%d",&temp);
+
 			time(&rawtime);
 			times=localtime(&rawtime);
-			snprintf(buffer,128,"%s %02d/%02d %02d:%02d",
+
+			snprintf(buffer,bs * sizeof(char),"%.1f °C | %s %02d/%02d %02d:%02d",
+					temp/1000.0f,
 					getWeekdayName(times->tm_wday),
 					times->tm_mday,times->tm_mon+1,
 					times->tm_hour,times->tm_min);
@@ -24,6 +33,10 @@ int main(void){
 
 	return 0;
 }
+
+
+
+
 const char *getWeekdayName(int wday){
 	switch(wday){
 		case 0: return "Sun";
