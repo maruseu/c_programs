@@ -7,6 +7,7 @@
 
 #define GETBS(BUFFER) sizeof(BUFFER)/sizeof(BUFFER[0])
 
+const char* weekday[]={"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 char bat_buf[8];
 char temp_buf[16];
 char date_buf[32];
@@ -68,18 +69,21 @@ void * upd_bat(){
 
 	while(1){
 		pFBat = fopen("/sys/class/power_supply/BAT0/capacity", "r");
-		fscanf(pFBat,"%d",&batCap);
+		if (pFBat){
+			fscanf(pFBat,"%d",&batCap);
 
-		pFBatStatus = fopen("/sys/class/power_supply/BAT0/status", "r");
-		fscanf(pFBatStatus,"%15s",batStatus);
-		if(!strcmp("Discharging",batStatus))
-			snprintf(bat_buf,GETBS(bat_buf),"%d ⇣", batCap);
-		else
-			snprintf(bat_buf,GETBS(bat_buf),"%d ⚡", batCap);
-		
-		fclose(pFBatStatus);
-		fclose(pFBat);
-
+			pFBatStatus = fopen("/sys/class/power_supply/BAT0/status", "r");
+			if (pFBatStatus) {
+				fscanf(pFBatStatus,"%15s",batStatus);
+				if(!strcmp("Discharging",batStatus))
+					snprintf(bat_buf,GETBS(bat_buf),"%d ⇣", batCap);
+				else
+					snprintf(bat_buf,GETBS(bat_buf),"%d ⚡", batCap);
+				
+				fclose(pFBatStatus);
+			}
+			fclose(pFBat);
+		} else snprintf(bat_buf,GETBS(bat_buf),"");
 		printf("Bat..");
 		fflush(stdout);
 		sleep(1);
@@ -91,12 +95,13 @@ void * upd_temp(){
 	FILE *pFTemp;
 
 	while(1){
-		pFTemp = fopen("/sys/class/hwmon/hwmon0/temp1_input", "r");
-		fscanf(pFTemp,"%d",&temp);
-		snprintf(temp_buf,GETBS(temp_buf),"%.1f C", temp/1000.0f);
+		pFTemp = fopen("/sys/class/hwmon/hwmon1/temp1_input", "r");
+		if(pFTemp){
+			fscanf(pFTemp,"%d",&temp);
+			snprintf(temp_buf,GETBS(temp_buf),"%.1f C", temp/1000.0f);
 
-		fclose(pFTemp);
-
+			fclose(pFTemp);
+		}
 		printf("temp..");
 		fflush(stdout);
 		sleep(1);
@@ -106,16 +111,18 @@ void * upd_temp(){
 #define GETMUS(CMD) \
 		memset(music,'\0',sizeof(music) * sizeof(music[0])); \
 		pFmpc = popen(CMD, "r"); \
-		fread(music, sizeof(char),GETBS(music),pFmpc); \
-		{ \
-			int i=0; \
-			while(music[i]!='\0') i++; \
-			if(music[i-1]=='\n') music[i-1]='\0'; \
+		if(pFmpc){ \
+			fread(music, sizeof(char),GETBS(music),pFmpc); \
+			{ \
+				int i=0; \
+				while(music[i]!='\0') i++; \
+				if(music[i-1]=='\n') music[i-1]='\0'; \
+			} \
+			if(!strcmp("",music) || !strcmp("\n",music)) \
+				snprintf(mus_buf,GETBS(mus_buf),""); \
+			else snprintf(mus_buf,GETBS(mus_buf),"「 ♪  %s  」",music); \
+			fclose(pFmpc); \
 		} \
-		if(!strcmp("",music) || !strcmp("\n",music)) \
-			snprintf(mus_buf,GETBS(mus_buf),""); \
-		else snprintf(mus_buf,GETBS(mus_buf),"「 ♪  %s  」",music); \
-		fclose(pFmpc); \
 		printf("mus.."); \
 		updateRoot(); \
 
@@ -137,22 +144,10 @@ void * upd_date(){
 		times=localtime(&rawtime);
 
 		snprintf(date_buf,GETBS(date_buf),"%s %02d:%02d",
-				getWeekdayName(times->tm_wday),
+				weekday[times->tm_wday],
 				times->tm_hour,times->tm_min);
 		printf("date..");
 		fflush(stdout);
 		sleep(61 - times->tm_sec);
 	}
-}
-
-const char *getWeekdayName(int wday){
-	switch(wday){
-		case 0: return "Sun";
-		case 1: return "Mon";
-		case 2: return "Tue";
-		case 3: return "Wed";
-		case 4: return "Thu";
-		case 5: return "Fri";
-		case 6: return "Sat";
-	} return "Err";
 }
